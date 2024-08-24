@@ -1,0 +1,29 @@
+version: '3.9'
+
+services:
+  proxymanager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+
+  roach1:
+    container_name: roach1
+    hostname: roach1
+    image: cockroachdb/cockroach
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    command: start-single-node --certs-dir=/cockroach/cockroach-certs
+    volumes:
+      - "${PWD}/certs/node1:/cockroach/cockroach-certs"
+      - "${PWD}/certs/ca:/cockroach/ca"
+      - "${PWD}/cockroach-data/crdb:/cockroach/cockroach-data"
+
+volumes:
+  roach1:
