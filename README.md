@@ -56,7 +56,7 @@ CREATE USER yourusername WITH PASSWORD 'yourpassword';
 GRANT ADMIN TO yourusername;
 ```
 
-##### You will have to create a DNS Record, e.g. "cockroach.haupt.design" as well as "www.cockroach.haupt.design" mapped to the server IP to make sure the certbot can assign a certificate. When  you are using cloudflare, make sure to disable the proxy!
+#### You will have to create a DNS Record, e.g. "cockroach.haupt.design" as well as "www.cockroach.haupt.design" mapped to the server IP to make sure the certbot can assign a certificate. When  you are using cloudflare, make sure to disable the proxy!
 
 We will continue with the example domain http://cockroach.haupt.design
 
@@ -78,4 +78,4 @@ Move to SSL.
 
 Save and you will receive a valid and functional reverse proxy setup if you followed the instructions correctly. 
 
-##### You are now able to open https://cockroach.haupt.design and login with the credentials you gave the user we previously created.
+#### You are now able to open https://cockroach.haupt.design and login with the credentials you gave the user we previously created.
