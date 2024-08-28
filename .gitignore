@@ -1,3 +1,4 @@
 .vscode/
 tmux-*
-insert_commands.sql
+insert_*
+performance.sh

@@ -1,37 +1,47 @@
 #!/bin/bash
 
-# Verbindungseinstellungen
 HOST="178.250.15.214"
 PORT="26257"
-DATABASE="shopware"
-USER="pascal"
-PASSWORD="cockroach"
+DATABASE="#"
+USER="#"
+PASSWORD="#"
 TABLE="bans"
 
-# Temporäre Datei zur Speicherung der SQL-Befehle
-SQL_FILE="insert_commands.sql"
+BATCH_SIZE=10000
 
-# Generiere die SQL-Befehle
-echo "Generating SQL commands..."
-{
-  echo "BEGIN;"
-  for i in {1..100000}; do
-    IP="192.168.1.$((i % 255))"
-    JAIL_NAME="jail_$i"
-    REASON="Automated entry $i"
-    HOSTNAME="host_$i"
+TEMP_DIR=$(mktemp -d)
 
-    # Korrigiere die SQL-Befehle, indem du Anführungszeichen um die Werte setzt
-    echo "INSERT INTO $TABLE (ip_address, jail_name, reason, hostname) VALUES ('$IP', '$JAIL_NAME', '$REASON', '$HOSTNAME');"
-  done
-  echo "COMMIT;"
-} > $SQL_FILE
+generate_sql() {
+    local start=$1
+    local end=$2
+    local batch_file="$TEMP_DIR/insert_batch_$start.sql"
 
-# Führe die SQL-Befehle in einer Transaktion aus
+    echo "BEGIN;" >$batch_file
+    for ((i = start; i <= end; i++)); do
+        IP="192.168.1.$((i % 255))"
+        JAIL_NAME="jail_$i"
+        REASON="Automated entry $i"
+        HOSTNAME="host_$i"
+
+        echo "INSERT INTO $TABLE (ip_address, jail_name, reason, hostname) VALUES ('$IP', '$JAIL_NAME', '$REASON', '$HOSTNAME');" >>$batch_file
+    done
+    echo "COMMIT;" >>$batch_file
+}
+
+TOTAL_RECORDS=100000
+
+NUM_BATCHES=$((TOTAL_RECORDS / BATCH_SIZE))
+
+for ((batch = 0; batch < NUM_BATCHES; batch++)); do
+    start=$((batch * BATCH_SIZE + 1))
+    end=$((start + BATCH_SIZE - 1))
+    generate_sql $start $end
+done
+
 echo "Inserting records into the $TABLE table..."
-PGPASSWORD=$PASSWORD psql -h $HOST -p $PORT -U $USER -d $DATABASE -f $SQL_FILE
+find $TEMP_DIR -name "insert_batch_*.sql" | xargs -n 1 -P 4 -I {} bash -c "PGPASSWORD=$PASSWORD psql -h $HOST -p $PORT -U $USER -d $DATABASE -f {}"
 
 # Aufräumen
-rm $SQL_FILE
+rm -r $TEMP_DIR
 
-echo "10,000 records successfully inserted into the $TABLE table."
+echo "Records successfully inserted into the $TABLE table."

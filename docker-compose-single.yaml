@@ -15,7 +15,7 @@ services:
   roach1:
     container_name: roach1
     hostname: roach1
-    image: cockroachdb/cockroach
+    image: cockroachdb/cockroach:v24.2.0
     ports:
       - "26257:26257"
       - "8080:8080"

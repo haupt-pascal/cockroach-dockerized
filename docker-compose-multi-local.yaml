@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+  proxymanager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+
+  roach1:
+    image: cockroachdb/cockroach:v24.2.0
+    container_name: roach1
+    hostname: roach1
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    volumes:
+      - "${PWD}/roach1-data:/cockroach/cockroach-data"
+      - "${PWD}/certs/node1:/cockroach/cockroach-certs"
+      - "${PWD}/certs/ca:/cockroach/ca"
+    command: start --advertise-addr=roach1:26357 --http-addr=0.0.0.0:8080 --listen-addr=roach1:26357 --sql-addr=0.0.0.0:26257 --join=roach1:26357,roach2:26358,roach3:26359 --certs-dir=/cockroach/cockroach-certs
+
+  roach2:
+    image: cockroachdb/cockroach:v24.2.0
+    container_name: roach2
+    hostname: roach2
+    depends_on:
+      roach1:
+        condition: service_started
+    ports:
+      - "26258:26258"
+      - "8081:8081"
+    volumes:
+      - "${PWD}/roach2-data:/cockroach/cockroach-data"
+      - "${PWD}/certs/node2:/cockroach/cockroach-certs"
+      - "${PWD}/certs/ca:/cockroach/ca"
+    command: start --advertise-addr=roach2:26358 --http-addr=0.0.0.0:8081 --listen-addr=roach2:26358 --sql-addr=0.0.0.0:26258 --join=roach1:26357,roach2:26358,roach3:26359 --certs-dir=/cockroach/cockroach-certs
+
+  roach3:
+    image: cockroachdb/cockroach:v24.2.0
+    container_name: roach3
+    hostname: roach3
+    depends_on:
+      roach1:
+        condition: service_started
+    ports:
+      - "26259:26259"
+      - "8082:8082"
+    volumes:
+      - "${PWD}/roach3-data:/cockroach/cockroach-data"
+      - "${PWD}/certs/node3:/cockroach/cockroach-certs"
+      - "${PWD}/certs/ca:/cockroach/ca"
+    command: start --advertise-addr=roach3:26359 --http-addr=0.0.0.0:8082 --listen-addr=roach3:26359 --sql-addr=0.0.0.0:26259 --join=roach1:26357,roach2:26358,roach3:26359 --certs-dir=/cockroach/cockroach-certs
+
+volumes:
+  roach1-data:
+  roach2-data:
+  roach3-data:

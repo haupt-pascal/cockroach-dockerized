@@ -12,7 +12,8 @@ This project is created to help set up CockroachDB in a secure way with SSL Cert
 ## To Do
 The following points are open to solve in the future.
 - &#x2611; Single-Node Setup
-- &#x2610; Multi-Node Setup 
+- &#x2611; Multi-Node Local Cluster 
+- &#x2610; Multi-Node Remote Cluster
 
 ## Single-Node Setup
 The following steps are used to create the secure environment from CockroachDB, this is not covered by the official documentation.
@@ -49,6 +50,54 @@ docker exec roach1 ./cockroach cert create-client root --certs-dir=/cockroach/co
 # Enter the database as root
 docker exec -ti roach1 cockroach sql --host=127.0.0.1 --certs-dir=/cockroach/cockroach-certs
 ```
+
+## Multi-Node Setup
+The following steps are used to create the secure environment from CockroachDB, this is not covered by the official documentation.
+
+```bash
+# Clone the repository
+git clone https://github.com/haupt-pascal/cockroach-dockerized.git
+
+# Enter the repository
+cd cockroach-dockerized
+
+# Create the certs directory and generate certificates
+openssl genrsa -out certs/ca/ca.key 2048
+openssl req -x509 -nodes -days 365 -key certs/ca/ca.key -out certs/ca/ca.crt -subj '/CN=LocalCA/O=CA/C=IN'
+
+mkdir -p certs/node1 certs/node2 certs/node3
+
+openssl genrsa -out certs/node1/node.key 2048
+openssl genrsa -out certs/node2/node.key 2048
+openssl genrsa -out certs/node3/node.key 2048
+
+openssl req -new -key certs/node1/node.key -out certs/node1/node.csr  -subj '/CN=node/O=LocalCockroachNode1/C=IN'
+openssl req -new -key certs/node2/node.key -out certs/node2/node.csr  -subj '/CN=node/O=LocalCockroachNode2/C=IN'
+openssl req -new -key certs/node3/node.key -out certs/node3/node.csr  -subj '/CN=node/O=LocalCockroachNode3/C=IN'
+
+SAN_PARAM="[SAN]\nsubjectAltName=IP:0.0.0.0,DNS:roach1"
+openssl x509 -req -in ./certs/node1/node.csr -CA ./certs/ca/ca.crt -CAkey ./certs/ca/ca.key -CAcreateserial -out ./certs/node1/node.crt -days 365000 -extfile <(echo -e "$SAN_PARAM") -extensions SAN
+SAN_PARAM="[SAN]\nsubjectAltName=IP:0.0.0.0,DNS:roach2"
+openssl x509 -req -in ./certs/node2/node.csr -CA ./certs/ca/ca.crt -CAkey ./certs/ca/ca.key -CAcreateserial -out ./certs/node2/node.crt -days 365000 -extfile <(echo -e "$SAN_PARAM") -extensions SAN
+SAN_PARAM="[SAN]\nsubjectAltName=IP:0.0.0.0,DNS:roach3"
+openssl x509 -req -in ./certs/node3/node.csr -CA ./certs/ca/ca.crt -CAkey ./certs/ca/ca.key -CAcreateserial -out ./certs/node3/node.crt -days 365000 -extfile <(echo -e "$SAN_PARAM") -extensions SAN
+
+cp certs/ca/ca.crt certs/node1
+cp certs/ca/ca.crt certs/node2
+cp certs/ca/ca.crt certs/node3
+
+# Start the docker container
+docker-compose -f docker-compose-multi-local.yaml up -d # or docker compose up -d
+
+# Initialize root login
+docker exec roach1 ./cockroach cert create-client root --certs-dir=/cockroach/cockroach-certs --ca-key=/cockroach/ca/ca.key --lifetime=24h
+
+# Enter the database as root
+docker exec -ti roach1 cockroach sql --host=0.0.0.0 --certs-dir=/cockroach/cockroach-certs
+```
+
+## General Settings (Single and Multi Node Setups)
+
 Now we need to create an user for future databases and the web login!
 ```sql
 CREATE USER yourusername WITH PASSWORD 'yourpassword';
