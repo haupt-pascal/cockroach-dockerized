@@ -13,7 +13,6 @@ This project is created to help set up CockroachDB in a secure way with SSL Cert
 The following points are open to solve in the future.
 - &#x2611; Single-Node Setup
 - &#x2611; Multi-Node Local Cluster 
-- &#x2610; Multi-Node Remote Cluster
 
 ## Single-Node Setup
 The following steps are used to create the secure environment from CockroachDB, this is not covered by the official documentation.
